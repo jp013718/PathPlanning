@@ -154,6 +154,11 @@ class DrrtConnect:
 
         return False
 
+    ########################################################
+    #
+    # TODO: Replan needs to iterate over all remaining trees
+    #
+    ########################################################
     def replanning(self):
         self.TrimRRT()
 
@@ -178,7 +183,12 @@ class DrrtConnect:
                     return path, waypoint
 
         return None
-
+    
+    #####################################################################
+    #
+    # TODO: Update TrimRRT to remove only segments intersecting obstacles
+    #
+    #####################################################################
     def TrimRRT(self):
         for i in range(1, len(self.vertex)):
             node = self.vertex[i]
