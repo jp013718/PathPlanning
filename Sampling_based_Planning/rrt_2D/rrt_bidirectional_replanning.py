@@ -212,6 +212,7 @@ class DrrtConnect:
             if node_p.flag == "INVALID":
                 node.parent = None
 
+        # May need to maintain nodes of trees in 2D array to more easily handle closest node solving
         # Remove invalid nodes
         self.vertex = [node for node in self.vertex if node.flag == "VALID"]
         self.vertex_old = copy.deepcopy(self.vertex)
