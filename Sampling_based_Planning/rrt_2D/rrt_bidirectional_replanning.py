@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
-                "/../../Sampling_based_Planning/")
+                "/../../")
 
 from Sampling_based_Planning.rrt_2D import env, plotting, utils
 
@@ -45,6 +45,9 @@ class DrrtConnect:
         self.vertex_old = []
         self.vertex_new = []
         self.edges = []
+        # Idea: Maintain individual trees in this list. We should only need pointers
+        # to the root nodes
+        self.trees = [self.s_start]
 
         self.env = env.Env()
         self.plotting = plotting.Plotting(s_start, s_goal)
@@ -138,16 +141,21 @@ class DrrtConnect:
             if node.flag == "INVALID":
                 return True
 
+    # Check if a given edge (start - end) intersects the most recently added obstacle. This obstacle will always
+    # be a circle centered at (x, y) with a radius of 2
     def is_collision_obs_add(self, start, end):
         delta = self.utils.delta
         obs_add = self.obs_add
 
+        # Check if start point is inside the most recently added obstacle
         if math.hypot(start.x - obs_add[0], start.y - obs_add[1]) <= obs_add[2] + delta:
             return True
 
+        # Check if end point is inside the most recently added obstacle
         if math.hypot(end.x - obs_add[0], end.y - obs_add[1]) <= obs_add[2] + delta:
             return True
 
+        # Check if the edge between start and end points intersects the most recently added obstacle
         o, d = self.utils.get_ray(start, end)
         if self.utils.is_intersect_circle(o, d, [obs_add[0], obs_add[1]], obs_add[2]):
             return True
@@ -186,19 +194,32 @@ class DrrtConnect:
     
     #####################################################################
     #
-    # TODO: Update TrimRRT to remove only segments intersecting obstacles
+    # TODO: Improvements...
+    # - Multiple list comprehension methods are likely less efficient
+    #   then using a loop to build all these lists at once
+    # - Setting parent nodes to None may be doable at the same time we 
+    #   invalidate nodes instead of in a separate loop here
     #
     #####################################################################
     def TrimRRT(self):
+        # Node invalidation occurs in the obstacle addition event, so all necessary nodes should be 
+        # invalidated by this point
+        
+        # For all nodes in the current tree, if the parent node is invalid, dereference the parent node
         for i in range(1, len(self.vertex)):
             node = self.vertex[i]
             node_p = node.parent
             if node_p.flag == "INVALID":
-                node.flag = "INVALID"
+                node.parent = None
 
+        # Remove invalid nodes
         self.vertex = [node for node in self.vertex if node.flag == "VALID"]
         self.vertex_old = copy.deepcopy(self.vertex)
+        # Get the root node of each remaining tree
+        self.trees = [node for node in self.vertex if node.parent is None]
+        # TODO: This will likely break, as we will try to create edges with None as the parent node
         self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)]]
+        
 
     def generate_random_node(self, goal_sample_rate):
         delta = self.utils.delta
