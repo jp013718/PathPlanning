@@ -217,8 +217,7 @@ class DrrtConnect:
         self.vertex_old = copy.deepcopy(self.vertex)
         # Get the root node of each remaining tree
         self.trees = [node for node in self.vertex if node.parent is None]
-        # TODO: This will likely break, as we will try to create edges with None as the parent node
-        self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)]]
+        self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)] if node.parent is not None]
         
 
     def generate_random_node(self, goal_sample_rate):
