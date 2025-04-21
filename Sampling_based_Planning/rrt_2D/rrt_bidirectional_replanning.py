@@ -230,7 +230,7 @@ class DrrtConnect:
         # Remove invalid nodes and additionally sort nodes into the correct trees
         self.vertex = [[node for node in self.vertex if self.in_tree(node, tree) and node.flag == "VALID"] for tree in self.trees]
         self.vertex_old = copy.deepcopy(self.vertex)
-        self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)] if node.parent is not None]
+        self.edges = [[Edge(node.parent, node) for node in tree[1:len(tree)] if node.parent] for tree in self.vertex]
         
     # Backtrack up through the parents of node until we reach the root, then compare roots
     def in_tree(self, node: Node, root: Node):
