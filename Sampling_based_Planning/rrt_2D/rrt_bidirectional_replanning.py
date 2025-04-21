@@ -25,12 +25,18 @@ class Node:
         self.parent = None
         self.flag = "VALID"
 
+    def __repr__(self):
+        return f"Node: ({self.x}, {self.y});\tParent: ({self.parent.x}, {self.parent.y})"
+
 
 class Edge:
     def __init__(self, n_p, n_c):
         self.parent = n_p
         self.child = n_c
         self.flag = "VALID"
+
+    def __repr__(self):
+        return f"EDGE: Child - {self.child}\t|\tParent - {self.parent}"
 
 
 class DrrtConnect:
@@ -47,7 +53,7 @@ class DrrtConnect:
         self.edges = []
         # Idea: Maintain individual trees in this list. We should only need pointers
         # to the root nodes
-        self.trees = [self.s_start]
+        self.roots = [self.s_start]
 
         self.env = env.Env()
         self.plotting = plotting.Plotting(s_start, s_goal)
@@ -181,7 +187,7 @@ class DrrtConnect:
         self.TrimRRT()
 
         for i in range(self.iter_max):
-            for tree in self.vertex:
+            for tree in self.trees:
                 node_rand = self.generate_random_node_replanning(self.goal_sample_rate, self.waypoint_sample_rate)
                 node_near = self.nearest_neighbor(tree, node_rand)
                 node_new = self.new_state(node_near, node_rand)
@@ -220,17 +226,18 @@ class DrrtConnect:
         for i in range(1, len(self.vertex)):
             node = self.vertex[i]
             node_p = node.parent
+            if not node_p: continue
             if node_p.flag == "INVALID":
                 node.parent = None
 
-        # Get the root node of each remaining tree
-        self.trees = [node for node in self.vertex if node.parent is None]
         # Remove invalid nodes
-        # self.vertex = [node for node in self.vertex if node.flag == "VALID"]
-        # Remove invalid nodes and additionally sort nodes into the correct trees
-        self.vertex = [[node for node in self.vertex if self.in_tree(node, tree) and node.flag == "VALID"] for tree in self.trees]
+        self.vertex = [node for node in self.vertex if node.flag == "VALID"]
         self.vertex_old = copy.deepcopy(self.vertex)
-        self.edges = [[Edge(node.parent, node) for node in tree[1:len(tree)] if node.parent] for tree in self.vertex]
+        # Get the root node of each remaining tree
+        self.roots = [node for node in self.vertex if node.parent is None]
+        # Maintain nodes in their individual trees
+        self.trees = [[node for node in self.vertex if self.in_tree(node, tree)] for tree in self.roots]
+        self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)] if node.parent]
         
     # Backtrack up through the parents of node until we reach the root, then compare roots
     def in_tree(self, node: Node, root: Node):
