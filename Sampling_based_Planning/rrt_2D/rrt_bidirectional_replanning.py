@@ -54,6 +54,7 @@ class DrrtConnect:
         # Idea: Maintain individual trees in this list. We should only need pointers
         # to the root nodes
         self.roots = [self.s_start]
+        self.trees = []
 
         self.env = env.Env()
         self.plotting = plotting.Plotting(s_start, s_goal)
