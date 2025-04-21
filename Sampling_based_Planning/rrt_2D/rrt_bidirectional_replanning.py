@@ -131,6 +131,13 @@ class DrrtConnect:
 
             self.fig.canvas.draw_idle()
 
+    #######################################################
+    #
+    # TODO: Invalidate nodes using windowing queries
+    # - May require significant changes to added obstacles
+    #   as those are currently always circles with radius 2
+    #
+    #######################################################
     def InvalidateNodes(self):
         for edge in self.edges:
             if self.is_collision_obs_add(edge.parent, edge.child):
@@ -212,14 +219,23 @@ class DrrtConnect:
             if node_p.flag == "INVALID":
                 node.parent = None
 
-        # May need to maintain nodes of trees in 2D array to more easily handle closest node solving
-        # Remove invalid nodes
-        self.vertex = [node for node in self.vertex if node.flag == "VALID"]
-        self.vertex_old = copy.deepcopy(self.vertex)
         # Get the root node of each remaining tree
         self.trees = [node for node in self.vertex if node.parent is None]
+        # Remove invalid nodes
+        # self.vertex = [node for node in self.vertex if node.flag == "VALID"]
+        # Remove invalid nodes and additionally sort nodes into the correct trees
+        self.vertex = [[node for node in self.vertex if self.in_tree(node, tree) and node.flag == "VALID"] for tree in self.trees]
+        self.vertex_old = copy.deepcopy(self.vertex)
         self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)] if node.parent is not None]
         
+    # Backtrack up through the parents of node until we reach the root, then compare roots
+    def in_tree(node: Node, root: Node):
+        new_node = node.parent if node.parent else node
+        while new_node.parent:
+            new_node = new_node.parent
+        if new_node is root:
+            return True
+        return False
 
     def generate_random_node(self, goal_sample_rate):
         delta = self.utils.delta
