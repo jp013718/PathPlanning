@@ -233,7 +233,7 @@ class DrrtConnect:
         self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)] if node.parent is not None]
         
     # Backtrack up through the parents of node until we reach the root, then compare roots
-    def in_tree(node: Node, root: Node):
+    def in_tree(self, node: Node, root: Node):
         new_node = node.parent if node.parent else node
         while new_node.parent:
             new_node = new_node.parent
