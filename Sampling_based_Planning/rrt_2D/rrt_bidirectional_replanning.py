@@ -233,9 +233,7 @@ class DrrtConnect:
         new_node = node.parent if node.parent else node
         while new_node.parent:
             new_node = new_node.parent
-        if new_node is root:
-            return True
-        return False
+        return new_node is root
 
     def generate_random_node(self, goal_sample_rate):
         delta = self.utils.delta
