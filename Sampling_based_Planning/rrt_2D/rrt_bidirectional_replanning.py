@@ -171,31 +171,35 @@ class DrrtConnect:
 
     ########################################################
     #
-    # TODO: Replan needs to iterate over all remaining trees
+    # TODO: Merge trees when an intersection occurs
+    # - Need to figure out how to rebuild tree structure
+    #   when merge occurs
+    # - Also involves reassigning parents when merges happen
     #
     ########################################################
     def replanning(self):
         self.TrimRRT()
 
         for i in range(self.iter_max):
-            node_rand = self.generate_random_node_replanning(self.goal_sample_rate, self.waypoint_sample_rate)
-            node_near = self.nearest_neighbor(self.vertex, node_rand)
-            node_new = self.new_state(node_near, node_rand)
+            for tree in self.vertex:
+                node_rand = self.generate_random_node_replanning(self.goal_sample_rate, self.waypoint_sample_rate)
+                node_near = self.nearest_neighbor(tree, node_rand)
+                node_new = self.new_state(node_near, node_rand)
 
-            if node_new and not self.utils.is_collision(node_near, node_new):
-                self.vertex.append(node_new)
-                self.vertex_new.append(node_new)
-                self.edges.append(Edge(node_near, node_new))
-                dist, _ = self.get_distance_and_angle(node_new, self.s_goal)
+                if node_new and not self.utils.is_collision(node_near, node_new):
+                    self.vertex.append(node_new)
+                    self.vertex_new.append(node_new)
+                    self.edges.append(Edge(node_near, node_new))
+                    dist, _ = self.get_distance_and_angle(node_new, self.s_goal)
 
-                if dist <= self.step_len:
-                    self.new_state(node_new, self.s_goal)
-                    path = self.extract_path(node_new)
-                    waypoint = self.extract_waypoint(node_new)
-                    print("path: ", len(path))
-                    print("waypoint: ", len(waypoint))
+                    if dist <= self.step_len:
+                        self.new_state(node_new, self.s_goal)
+                        path = self.extract_path(node_new)
+                        waypoint = self.extract_waypoint(node_new)
+                        print("path: ", len(path))
+                        print("waypoint: ", len(waypoint))
 
-                    return path, waypoint
+                        return path, waypoint
 
         return None
     
