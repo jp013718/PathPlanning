@@ -199,6 +199,9 @@ class DrrtConnect:
                     self.edges.append(Edge(node_near, node_new))
                     dist, _ = self.get_distance_and_angle(node_new, self.s_goal)
 
+                    # Determines if a new path if found. Needs to be changed now that
+                    # trees stick around.
+                    # Idea: Add flags in trees for contains_goal and contains_start
                     if dist <= self.step_len:
                         self.new_state(node_new, self.s_goal)
                         path = self.extract_path(node_new)
