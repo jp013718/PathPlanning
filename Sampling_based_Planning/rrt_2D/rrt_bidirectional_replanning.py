@@ -29,10 +29,16 @@ class Node:
 
     def __repr__(self):
         return f"Node: ({self.x}, {self.y})"
+    
+    def is_same(self, other: Self):
+        return self.x == other.x and self.y == other.y and self.parent == other.parent
+    
+    def is_similar(self, other: Self):
+        return self.x == other.x and self.y == other.y
 
 
 class Edge:
-    def __init__(self, n_p, n_c):
+    def __init__(self, n_p: Node, n_c: Node):
         self.parent = n_p
         self.child = n_c
         self.flag = "VALID"
@@ -71,7 +77,10 @@ class Edge:
         return intersection if 0 <= lambda1 <= 1 and 0 <= lambda2 <= 1 else None
     
     def is_equivalent(self, other: Self):
-        return self.child.x == other.child.x and self.child.y == other.child.y and self.parent.x == other.parent.x and self.parent.y == other.parent.y
+        return self.child.is_same(other.child) and self.parent.is_same(other.parent)
+    
+    def is_similar(self, other: Self):
+        return self.child.is_similar(other.child) and self.parent.is_similar(other.parent)
         
 
 
@@ -230,20 +239,26 @@ class DrrtConnect:
         self.TrimRRT()
 
         for i in range(self.iter_max):
-            print(f"i: {i}")
             j = 0
-            if len(self.roots) == 1:
-                print(f"Start: {self.s_start}")
-                goal_root = self.goal_node
-                while goal_root.parent:
-                    print(f"On path: {goal_root}")
-                    goal_root = goal_root.parent
-                print(f"Goal Root: {goal_root}")
-                print(f"Remaining root: {self.roots[0]}")
-                break
             while j < len(self.roots):
-                print(f"\tj: {j}")
-                print(f"Number of trees: {len(self.roots)}")
+                if self.s_start.parent:
+                    print("Start node has been assigned a parent")
+                    return
+                if len(self.roots) == 1:
+                    from time import sleep
+                    print("Reduced to 1 tree without finding path")
+                    print("Orphaned nodes:")
+                    for node in self.vertex:
+                        if node.parent is None: print(node)
+                    print(f"Remaining roots: {self.roots}")
+                    print(f"Start node parent: {self.s_start.parent}")
+                    print("Root of start node: ", end='')
+                    start_root = self.s_start
+                    while start_root.parent:
+                        start_root = start_root.parent
+                        print(start_root)
+                        sleep(1)
+                    return
                 tree = self.trees[j]
                 node_rand = self.generate_random_node_replanning(self.goal_sample_rate, self.waypoint_sample_rate)
                 node_near = self.nearest_neighbor(tree, node_rand)
@@ -260,6 +275,7 @@ class DrrtConnect:
                     edge_new = Edge(node_near, node_new)
                     intersection = None
                     intersecting_edge = None
+                    i_tree_index = 0
                     for k, edge_tree in enumerate(self.tree_edges):
                         if k == j: continue
                         for edge in edge_tree:
@@ -270,51 +286,31 @@ class DrrtConnect:
 
 
                     if intersection:
+                        # Get the child and parent of the intersecting edge
                         edge_child, edge_parent = intersecting_edge.child, intersecting_edge.parent
+                        # Assign the correct parent node to intersection
+                        if self.roots[j].is_same(self.s_start):
+                            intersection.parent = node_near
+                        else:
+                            intersection.parent = edge_parent
+                        # Remove the intersecting edge from edges
                         self.edges = [edge for edge in self.edges if not edge.is_equivalent(intersecting_edge)]
                         self.tree_edges[i_tree_index] = [edge for edge in self.tree_edges[i_tree_index] if not edge.is_equivalent(intersecting_edge)]
+                        # Add the intersection point as a new node
                         self.vertex.append(intersection)
                         tree.append(intersection)
-                        # MERGE TREES
-                        # Break the intersecting edges...
-                        # Add a new edge from the child of the intersecting edge to the intersection point
-                        self.edges.append(Edge(intersection, edge_child))
-                        self.tree_edges[i_tree_index].append(Edge(intersection, edge_child))
-                        edge_child.parent = intersection
-                        # Add a new edge from the new point to the intersection point
-                        self.edges.append(Edge(intersection, node_new))
-                        self.tree_edges[j].append(Edge(intersection, node_new))
-                        node_new.parent = intersection
+
+                        # Create new edges with the intersection point as the parent
+                        new_edge = Edge(intersection, node_new)
+                        self.edges.append(new_edge)
+                        self.tree_edges[j].append(new_edge)
+
+                        child_edge = Edge(intersection, edge_child)
+                        self.edges.append(child_edge)
+                        self.tree_edges[i_tree_index].append(child_edge)
                         
-                        # If the parent node of the intersecting edge is part of the start tree,
-                        # make sure it doesn't flip the start node
-                        if self.in_tree(edge_parent, self.s_start):
-                            print("Flipping when intersecting tree contains start")
-                            self.edges.append(Edge(edge_parent, intersection))
-                            self.tree_edges[i_tree_index].append(Edge(edge_parent, intersection))
-                            intersection.parent = edge_parent
-                            self.flip_tree(node_near, intersection, j)
-                            for node in tree:
-                                self.trees[i_tree_index].append(node)
-                            for edge in self.tree_edges[j]:
-                                self.tree_edges[i_tree_index].append(edge)
-                            self.trees.pop(j)
-                            self.roots.pop(j)
-                            self.tree_edges.pop(j)
-                        # Otherwise, we flip the tree containing the intersecting edge
-                        else:
-                            print("Flipping when intersecting tree does not contain start")
-                            self.edges.append(Edge(node_near, intersection))
-                            self.tree_edges[j].append(Edge(node_near, intersection))
-                            intersection.parent = node_near
-                            self.flip_tree(edge_parent, intersection, i_tree_index)
-                            for node in self.trees[i_tree_index]:
-                                tree.append(node)
-                            for edge in self.tree_edges[i_tree_index]:
-                                self.tree_edges[j].append(edge)
-                            self.trees.pop(i_tree_index)
-                            self.roots.pop(i_tree_index)
-                            self.tree_edges.pop(i_tree_index)
+                        # Merge the two trees
+                        self.merge_trees(j, node_near, i_tree_index, edge_parent, intersection)
 
                         if self.in_tree(self.goal_node, self.s_start):
                             path = self.extract_path(self.goal_node)
@@ -323,30 +319,71 @@ class DrrtConnect:
                             print("waypoint: ", len(waypoint))
 
                             return path, waypoint
+
+                        # Since we removed a tree from the list, decrement j
+                        j -= 1
+
                     else:
                         self.edges.append(edge_new)
                         self.tree_edges[j].append(edge_new)
-                        j += 1
 
                 j += 1
         
         return None
     
     def flip_tree(self, node: Node, new_root: Node, index):
+        print(f"Flipping tree rooted at {self.roots[index]} (index {index})")
         prev = new_root
         cursor = node
-        next = node.parent
-        while cursor.parent:
+        while cursor:
+            if cursor.is_similar(self.s_start): print("Operating on start node")
+            next = cursor.parent
             # Since edges currently aren't a sorted list, it's probably just as efficient to rebuild the
             # list in order to delete an edge from it
-            self.edges = [edge for edge in self.edges if not edge.is_equivalent(Edge(next, cursor))]
-            self.tree_edges[index] = [edge for edge in self.tree_edges[index] if not edge.is_equivalent(Edge(next, cursor))]
+            if next:
+                self.edges = [edge for edge in self.edges if not edge.is_similar(Edge(next, cursor))]
+                self.tree_edges[index] = [edge for edge in self.tree_edges[index] if not edge.is_similar(Edge(next, cursor))]
             cursor.parent = prev
             self.edges.append(Edge(cursor.parent, cursor))
             self.tree_edges[index].append(Edge(cursor.parent, cursor))
             prev = cursor
             cursor = next
-            next = cursor.parent
+        
+        
+    def merge_trees(self, indx_tree1, node1: Node, indx_tree2, node2: Node, intersection: Node):
+        print(f"Merging trees with roots {self.roots[indx_tree1]} and {self.roots[indx_tree2]}")
+        print(self.roots)
+        start_in_tree1 = self.s_start.is_same(self.roots[indx_tree1])
+        start_in_tree2 = self.s_start.is_same(self.roots[indx_tree2])
+
+        if start_in_tree1:
+            self.flip_tree(node2, intersection, indx_tree2)
+            # Merge nodes
+            for node in self.trees[indx_tree2]:
+                self.trees[indx_tree1].append(node)
+            # Merge edges
+            for edge in self.tree_edges[indx_tree2]:
+                self.tree_edges[indx_tree1].append(edge)
+            # Delete the leftover tree
+            print(f"Removing tree rooted at {self.roots[indx_tree2]}")
+            self.trees.pop(indx_tree2)
+            self.tree_edges.pop(indx_tree2)
+            self.roots.pop(indx_tree2)
+        else:
+            self.flip_tree(node1, intersection, indx_tree1)
+            # Merge nodes
+            for node in self.trees[indx_tree1]:
+                self.trees[indx_tree2].append(node)
+            # Merge edges
+            for edge in self.tree_edges[indx_tree1]:
+                self.tree_edges[indx_tree2].append(edge)
+            # Delete the leftover tree
+            print(f"Removing tree rooted at {self.roots[indx_tree1]}\n")
+            self.trees.pop(indx_tree1)
+            self.tree_edges.pop(indx_tree1)
+            self.roots.pop(indx_tree1)
+
+
 
     #####################################################################
     #
@@ -385,7 +422,7 @@ class DrrtConnect:
         new_node = node.parent if node.parent else node
         while new_node.parent:
             new_node = new_node.parent
-        return new_node is root
+        return new_node.is_same(root)
 
     def generate_random_node(self, goal_sample_rate):
         delta = self.utils.delta
@@ -532,7 +569,7 @@ def main():
     x_start = (2, 2)  # Starting node
     x_goal = (49, 24)  # Goal node
 
-    drrt = DrrtConnect(x_start, x_goal, 0.5, 0.1, 0.6, 50000)
+    drrt = DrrtConnect(x_start, x_goal, 0.5, 0.1, 0.6, 5000)
     drrt.planning()
 
 
