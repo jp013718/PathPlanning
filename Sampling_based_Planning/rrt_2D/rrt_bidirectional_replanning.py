@@ -43,6 +43,9 @@ class Edge:
         self.child = n_c
         self.flag = "VALID"
 
+    def length(self):
+        return np.sqrt((self.child.x-self.parent.x)**2 + (self.child.y-self.parent.y)**2)
+
     def __repr__(self):
         return f"EDGE: Child - {self.child}\t|\tParent - {self.parent}"
     
@@ -241,24 +244,6 @@ class DrrtConnect:
         for i in range(self.iter_max):
             j = 0
             while j < len(self.roots):
-                if self.s_start.parent:
-                    print("Start node has been assigned a parent")
-                    return
-                if len(self.roots) == 1:
-                    from time import sleep
-                    print("Reduced to 1 tree without finding path")
-                    print("Orphaned nodes:")
-                    for node in self.vertex:
-                        if node.parent is None: print(node)
-                    print(f"Remaining roots: {self.roots}")
-                    print(f"Start node parent: {self.s_start.parent}")
-                    print("Root of start node: ", end='')
-                    start_root = self.s_start
-                    while start_root.parent:
-                        start_root = start_root.parent
-                        print(start_root)
-                        sleep(1)
-                    return
                 tree = self.trees[j]
                 node_rand = self.generate_random_node_replanning(self.goal_sample_rate, self.waypoint_sample_rate)
                 node_near = self.nearest_neighbor(tree, node_rand)
@@ -329,14 +314,13 @@ class DrrtConnect:
 
                 j += 1
         
+        print("Max number of iterations reached")
         return None
     
     def flip_tree(self, node: Node, new_root: Node, index):
-        print(f"Flipping tree rooted at {self.roots[index]} (index {index})")
         prev = new_root
         cursor = node
         while cursor:
-            if cursor.is_similar(self.s_start): print("Operating on start node")
             next = cursor.parent
             # Since edges currently aren't a sorted list, it's probably just as efficient to rebuild the
             # list in order to delete an edge from it
@@ -351,10 +335,7 @@ class DrrtConnect:
         
         
     def merge_trees(self, indx_tree1, node1: Node, indx_tree2, node2: Node, intersection: Node):
-        print(f"Merging trees with roots {self.roots[indx_tree1]} and {self.roots[indx_tree2]}")
-        print(self.roots)
         start_in_tree1 = self.s_start.is_same(self.roots[indx_tree1])
-        start_in_tree2 = self.s_start.is_same(self.roots[indx_tree2])
 
         if start_in_tree1:
             self.flip_tree(node2, intersection, indx_tree2)
@@ -365,7 +346,6 @@ class DrrtConnect:
             for edge in self.tree_edges[indx_tree2]:
                 self.tree_edges[indx_tree1].append(edge)
             # Delete the leftover tree
-            print(f"Removing tree rooted at {self.roots[indx_tree2]}")
             self.trees.pop(indx_tree2)
             self.tree_edges.pop(indx_tree2)
             self.roots.pop(indx_tree2)
@@ -378,7 +358,6 @@ class DrrtConnect:
             for edge in self.tree_edges[indx_tree1]:
                 self.tree_edges[indx_tree2].append(edge)
             # Delete the leftover tree
-            print(f"Removing tree rooted at {self.roots[indx_tree1]}\n")
             self.trees.pop(indx_tree1)
             self.tree_edges.pop(indx_tree1)
             self.roots.pop(indx_tree1)
@@ -413,7 +392,7 @@ class DrrtConnect:
         self.roots = [node for node in self.vertex if node.parent is None]
         # Maintain nodes in their individual trees
         self.trees = [[node for node in self.vertex if self.in_tree(node, tree)] for tree in self.roots]
-        self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)] if node.parent]
+        self.edges = [Edge(node.parent, node) for node in self.vertex[1:len(self.vertex)] if node.parent and Edge(node.parent, node).length() > 0]
         self.tree_edges = [[edge for edge in self.edges if self.in_tree(edge.child, tree)] for tree in self.roots]
 
         
