@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 from typing import Self
+from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../../")
@@ -230,15 +231,9 @@ class DrrtConnect:
 
         return False
 
-    ########################################################
-    #
-    # TODO: Merge trees when an intersection occurs
-    # - Need to figure out how to rebuild tree structure
-    #   when merge occurs
-    # - Also involves reassigning parents when merges happen
-    #
-    ########################################################
+
     def replanning(self):
+        start_time = datetime.now()
         self.TrimRRT()
 
         for i in range(self.iter_max):
@@ -302,6 +297,9 @@ class DrrtConnect:
                             waypoint = self.extract_waypoint(self.goal_node)
                             print("path: ", len(path))
                             print("waypoint: ", len(waypoint))
+                            
+                            end_time = datetime.now()
+                            print(f"Replanning completeted in {end_time-start_time}")
 
                             return path, waypoint
 

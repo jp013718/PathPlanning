@@ -11,6 +11,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+from datetime import datetime
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../..")
 
@@ -154,6 +156,7 @@ class DynamicRrt:
         return False
 
     def replanning(self):
+        start_time = datetime.now()
         self.TrimRRT()
 
         for i in range(self.iter_max):
@@ -173,6 +176,9 @@ class DynamicRrt:
                     waypoint = self.extract_waypoint(node_new)
                     print("path: ", len(path))
                     print("waypoint: ", len(waypoint))
+
+                    end_time = datetime.now()
+                    print(f"Replanning completed in {end_time-start_time}")
 
                     return path, waypoint
 
