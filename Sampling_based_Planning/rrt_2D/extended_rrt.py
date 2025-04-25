@@ -83,37 +83,17 @@ class ExtendedRrt:
             else:
                 x, y = int(x), int(y)
                 print("Add circle obstacle at: s =", x, ",", "y =", y)
-                self.obs_add = [x, y, 2]
                 self.obs_circle.append([x, y, 2])
                 self.utils.update_obs(self.obs_circle, self.obs_boundary, self.obs_rectangle)
-                self.InvalidateNodes()
+                path, waypoint = self.replanning()
 
-                if self.is_path_invalid():
-                    print("Path is Replanning ...")
-                    path, waypoint = self.replanning()
-
-                    print("len_vertex: ", len(self.vertex))
-                    print("len_vertex_old: ", len(self.vertex_old))
-                    print("len_vertex_new: ", len(self.vertex_new))
-
-                    plt.cla()
-                    self.plot_grid("Dynamic_RRT")
-                    self.plot_vertex_old()
-                    self.plot_path(self.path, color='blue')
-                    self.plot_vertex_new()
-                    self.vertex_new = []
-                    self.plot_path(path)
-                    self.path = path
-                    self.waypoint = waypoint
-                else:
-                    print("Trimming Invalid Nodes ...")
-                    self.TrimRRT()
-
-                    plt.cla()
-                    self.plot_grid("Dynamic_RRT")
-                    self.plot_visited(animation=False)
-                    self.plot_path(self.path)
-
+                plt.cla()
+                self.plot_grid("Extended_RRT")
+                self.plot_path(self.path, color='blue')
+                self.plot_visited()
+                self.plot_path(path)
+                self.path = path
+                self.waypoint = waypoint
                 self.fig.canvas.draw_idle()
 
     def on_press(self, event):
