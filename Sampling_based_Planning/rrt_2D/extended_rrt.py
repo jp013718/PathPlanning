@@ -9,9 +9,10 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
-                "/../../Sampling_based_Planning/")
+                "/../../")
 
 from Sampling_based_Planning.rrt_2D import env, plotting, utils
 
@@ -66,12 +67,54 @@ class ExtendedRrt:
                     self.plot_path(path)
                     self.path = path
                     self.waypoint = self.extract_waypoint(node_new)
-                    self.fig.canvas.mpl_connect('button_press_event', self.on_press)
+                    self.fig.canvas.mpl_connect('button_press_event', self.mod_on_press)
                     plt.show()
 
                     return
 
         return None
+
+    def mod_on_press(self, event):
+        obstacle_coordinates = [(6, 24), (15, 17), (29, 4), (45, 26), (45, 9), (30, 20), (14, 26)]
+        for obstacle in obstacle_coordinates:
+            x, y = obstacle
+            if x < 0 or x > 50 or y < 0 or y > 30:
+                print("Please choose right area!")
+            else:
+                x, y = int(x), int(y)
+                print("Add circle obstacle at: s =", x, ",", "y =", y)
+                self.obs_add = [x, y, 2]
+                self.obs_circle.append([x, y, 2])
+                self.utils.update_obs(self.obs_circle, self.obs_boundary, self.obs_rectangle)
+                self.InvalidateNodes()
+
+                if self.is_path_invalid():
+                    print("Path is Replanning ...")
+                    path, waypoint = self.replanning()
+
+                    print("len_vertex: ", len(self.vertex))
+                    print("len_vertex_old: ", len(self.vertex_old))
+                    print("len_vertex_new: ", len(self.vertex_new))
+
+                    plt.cla()
+                    self.plot_grid("Dynamic_RRT")
+                    self.plot_vertex_old()
+                    self.plot_path(self.path, color='blue')
+                    self.plot_vertex_new()
+                    self.vertex_new = []
+                    self.plot_path(path)
+                    self.path = path
+                    self.waypoint = waypoint
+                else:
+                    print("Trimming Invalid Nodes ...")
+                    self.TrimRRT()
+
+                    plt.cla()
+                    self.plot_grid("Dynamic_RRT")
+                    self.plot_visited(animation=False)
+                    self.plot_path(self.path)
+
+                self.fig.canvas.draw_idle()
 
     def on_press(self, event):
         x, y = event.xdata, event.ydata
@@ -94,6 +137,7 @@ class ExtendedRrt:
             self.fig.canvas.draw_idle()
 
     def replanning(self):
+        start_time = datetime.now()
         self.vertex = [self.s_start]
 
         for i in range(self.iter_max):
@@ -109,6 +153,9 @@ class ExtendedRrt:
                     self.new_state(node_new, self.s_goal)
                     path = self.extract_path(node_new)
                     waypoint = self.extract_waypoint(node_new)
+
+                    end_time = datetime.now()
+                    print(f"Replanning completed in {end_time-start_time}")
 
                     return path, waypoint
 
