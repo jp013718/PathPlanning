@@ -9,7 +9,9 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
 from datetime import datetime
+from shapely import frechet_distance, LineString
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../../")
@@ -86,6 +88,11 @@ class ExtendedRrt:
                 self.obs_circle.append([x, y, 2])
                 self.utils.update_obs(self.obs_circle, self.obs_boundary, self.obs_rectangle)
                 path, waypoint = self.replanning()
+
+                old_path_linstr = LineString(self.path)
+                new_path_linstr = LineString(path)
+                deviation = frechet_distance(old_path_linstr, new_path_linstr, densify=0.5)
+                print(f"Frechet Distance Between Old and New Path: {deviation}")
 
                 plt.cla()
                 self.plot_grid("Extended_RRT")

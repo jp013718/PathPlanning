@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 from datetime import datetime
+from shapely import frechet_distance, LineString
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../..")
@@ -110,6 +111,11 @@ class DynamicRrt:
                     print("len_vertex: ", len(self.vertex))
                     print("len_vertex_old: ", len(self.vertex_old))
                     print("len_vertex_new: ", len(self.vertex_new))
+
+                    old_path_linstr = LineString(self.path)
+                    new_path_linstr = LineString(path)
+                    deviation = frechet_distance(old_path_linstr, new_path_linstr, densify=0.5)
+                    print(f"Frechet Distance Between Old and New Path: {deviation}")
 
                     plt.cla()
                     self.plot_grid("Dynamic_RRT")
